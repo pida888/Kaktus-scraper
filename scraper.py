@@ -12,31 +12,36 @@ def run():
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         
-        # Otevření přihlašovací stránky
-        page.goto("https://www.mujkaktus.cz/prihlaseni")
-        
-        # Vyplnění údajů a kliknutí na přihlášení (nutno ověřit přes F12 selektory)
-        page.fill('input[name="jmeno"]', KAKTUS_USER)
-        page.fill('input[name="heslo"]', KAKTUS_PASS)
-        page.click('button:has-text("Přihlásit")')
-        
-        # Čekání na načtení hlavního přehledu
-        page.wait_for_selector('text="AKTUÁLNÍ STAV KREDITU"')
-        page_text = page.inner_text("body")
-        
-        # Vyhledání vzoru jako "5,1 GB"
-        match = re.search(r'(\d+,\d+|\d+)\s*GB\s*Data', page_text)
-        if match:
-            # Převod textu na MB
-            hodnota_gb = match.group(1).replace(',', '.')
-            hodnota_mb = int(float(hodnota_gb) * 1024)
+        try:
+            page.goto("https://www.mujkaktus.cz/prihlaseni")
             
-            print(f"Nalezeno {hodnota_gb} GB, odesílám {hodnota_mb} MB do MacroDroidu.")
-            requests.get(f"{MACRODROID_WEBHOOK}?zbytek={hodnota_mb}")
-        else:
-            print("Zůstatek dat nenalezen.")
+            # Počkáme 3 vteřiny, aby se stihly načíst případné vyskakovací lišty
+            page.wait_for_timeout(3000)
             
-        browser.close()
+            page.fill('input[name="jmeno"]', KAKTUS_USER)
+            page.fill('input[name="heslo"]', KAKTUS_PASS)
+            page.click('button:has-text("Přihlásit")')
+            
+            page.wait_for_selector('text="AKTUÁLNÍ STAV KREDITU"')
+            page_text = page.inner_text("body")
+            
+            match = re.search(r'(\d+,\d+|\d+)\s*GB\s*Data', page_text)
+            if match:
+                hodnota_gb = match.group(1).replace(',', '.')
+                hodnota_mb = int(float(hodnota_gb) * 1024)
+                print(f"Nalezeno {hodnota_gb} GB, odesílám {hodnota_mb} MB.")
+                requests.get(f"{MACRODROID_WEBHOOK}?zbytek={hodnota_mb}")
+            else:
+                print("Zůstatek nenalezen.")
+                
+        except Exception as e:
+            print(f"Skript spadl: {e}")
+            # Při chybě se vyfotí obrazovka
+            page.screenshot(path="error.png")
+            raise 
+            
+        finally:
+            browser.close()
 
 if __name__ == "__main__":
     run()
