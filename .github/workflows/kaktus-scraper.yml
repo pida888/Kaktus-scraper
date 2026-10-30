@@ -29,10 +29,18 @@ jobs:
         run: |
           playwright install --with-deps chromium
 
-      - name: Spuštění scraperu
+      - name: Run Scraper
         env:
           KAKTUS_USER: ${{ secrets.KAKTUS_USER }}
           KAKTUS_PASS: ${{ secrets.KAKTUS_PASS }}
           MACRODROID_WEBHOOK: ${{ secrets.MACRODROID_WEBHOOK }}
-        run: | 
-          python scraper.py 
+        run: python scraper.py
+
+      - name: Upload error screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshot
+          path: '*.png'
+          retention-days: 3
+
