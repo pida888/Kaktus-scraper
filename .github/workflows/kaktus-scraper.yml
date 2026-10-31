@@ -2,9 +2,11 @@ name: Kaktus Data Scraper
 
 on:
   schedule:
-    # Spustí se automaticky každý den v 03:00 ráno UTC (04:00 ráno v ČR)
-    - cron: '17 0 * * *'
-  workflow_dispatch: # Umožní ti spustit skript kdykoliv ručně tlačítkem
+    - cron: '7 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   scrape-data:
@@ -33,3 +35,6 @@ jobs:
           KAKTUS_PASS: ${{ secrets.KAKTUS_PASS }}
           MACRODROID_WEBHOOK: ${{ secrets.MACRODROID_WEBHOOK }}
         run: python scraper.py
+
+      - name: Udržení aktivity (Keepalive Workflow)
+        uses: gautamkrishnar/keepalive-workflow@v2
