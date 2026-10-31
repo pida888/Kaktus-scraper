@@ -1,7 +1,7 @@
 import os
 import re
 import requests
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError
 
 # Přihlašovací údaje se načtou bezpečně z GitHub Secrets
 KAKTUS_USER = os.getenv("KAKTUS_USER")
@@ -16,10 +16,14 @@ def run():
         try:
             print("Otevírám Kaktus...")
             page.goto("https://www.mujkaktus.cz/moje-sluzby")
-            page.wait_for_timeout(4000)
+            
+            # Místo pevného čekání (hard sleep) se dynamicky čeká, až bude pole pro e-mail viditelné
+            print("Čekám na načtení přihlašovacího formuláře...")
+            email_pole = page.locator('.tm-input__input').first
+            email_pole.wait_for(state="visible", timeout=15000)
             
             print("Zadávám e-mail...")
-            page.locator('.tm-input__input').first.fill(KAKTUS_USER, force=True)
+            email_pole.fill(KAKTUS_USER, force=True)
             
             print("Zadávám heslo...")
             heslo_pole = page.locator('input[type="password"]')
@@ -47,8 +51,10 @@ def run():
             
             bonus_celkem = 0
             bonus_locator = page.locator('details.credit-bonus-details')
-            if bonus_locator.is_visible():
-                bonus_text = bonus_locator.inner_text()
+            
+            # Bezpečnější kontrola, zda element na stránce vůbec existuje, než se z něj čte text
+            if bonus_locator.count() > 0:
+                bonus_text = bonus_locator.first.inner_text()
                 match_bonus = re.search(r'hodnotě\s*(\d+)', bonus_text, re.IGNORECASE)
                 if match_bonus:
                     bonus_celkem = int(match_bonus.group(1))
@@ -62,9 +68,18 @@ def run():
             print(f" - Reálný kredit: {kredit_real} Kč")
             print("----------------\n")
             
-            # Odeslání do MacroDroidu s opraveným znakem &
-            requests.get(f"{MACRODROID_WEBHOOK}?celkem_data={celkove_gb}&data={data_mb}&kredit={kredit_celkem}&bonus={bonus_celkem}&real={kredit_real}")
+            # Odeslání do MacroDroidu a ověření HTTP statusu
+            url = f"{MACRODROID_WEBHOOK}?celkem_data={celkove_gb}&data={data_mb}&kredit={kredit_celkem}&bonus={bonus_celkem}&real={kredit_real}"
+            response = requests.get(url)
+            
+            if response.status_code == 200:
+                print("Úspěšně odesláno přes Webhook do MacroDroidu.")
+            else:
+                print(f"Chyba při odesílání do MacroDroidu. HTTP Status: {response.status_code}")
 
+        # Specifické odchytávání chyb pro snazší diagnostiku v GitHub Actions logu
+        except TimeoutError:
+            print("\nSkript spadl: TimeoutError - Prvek se nenačetl včas (možná změna CSS tříd na webu Kaktusu nebo pomalé spojení).")
         except Exception as e:
             print(f"\nSkript spadl: {e}")
             
