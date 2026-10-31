@@ -2,10 +2,9 @@ name: Kaktus Data Scraper
 
 on:
   schedule:
-    # Spustí se automaticky každý den v 8:00 UTC (9:00 / 10:00 SEČ)
-    - cron: '0 8 * * *'
-  workflow_dispatch: 
-    # Umožní manuální spuštění skriptu kliknutím na tlačítko v GitHub rozhraní
+    # Spustí se automaticky každý den v 03:00 ráno UTC (04:00 ráno v ČR)
+    - cron: '17 0 * * *'
+  workflow_dispatch: # Umožní ti spustit skript kdykoliv ručně tlačítkem
 
 jobs:
   scrape-data:
@@ -23,24 +22,14 @@ jobs:
       - name: Instalace knihoven
         run: |
           python -m pip install --upgrade pip
-          pip install requests playwright
+          pip install playwright requests
 
-      - name: Instalace Playwright prohlížečů a závislostí
-        run: |
-          playwright install --with-deps chromium
+      - name: Instalace Playwright prohlížečů
+        run: playwright install chromium
 
-      - name: Run Scraper
+      - name: Spuštění scraperu
         env:
           KAKTUS_USER: ${{ secrets.KAKTUS_USER }}
           KAKTUS_PASS: ${{ secrets.KAKTUS_PASS }}
           MACRODROID_WEBHOOK: ${{ secrets.MACRODROID_WEBHOOK }}
         run: python scraper.py
-
-      - name: Upload error screenshot
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-screenshot
-          path: '*.png'
-          retention-days: 3
-
