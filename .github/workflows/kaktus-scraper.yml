@@ -36,5 +36,13 @@ jobs:
           MACRODROID_WEBHOOK: ${{ secrets.MACRODROID_WEBHOOK }}
         run: python scraper.py
 
-      - name: Udržení aktivity (Keepalive Workflow)
-        uses: gautamkrishnar/keepalive-workflow@v2
+      # Udrží repozitář aktivní navždy bez cizích pluginů
+      - name: Auto Keepalive (automatické probuzení)
+        run: |
+          # Běží pouze 1. den v měsíci, aby se repozitář zbytečně nespamoval
+          if [ "$(date +%d)" = "01" ]; then
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "chore: keepalive commit pro udržení cronu"
+            git push
+          fi
