@@ -2,6 +2,7 @@ name: Kaktus Data Scraper
 
 on:
   schedule:
+    # 01:43 UTC = 02:43 v zimním čase (CET) / 03:43 v letním čase (CEST)
     - cron: '43 1 * * *'
   workflow_dispatch:
 
@@ -25,7 +26,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Instalace knihoven
         run: pip install playwright requests
@@ -48,7 +48,7 @@ jobs:
           path: error.png
           retention-days: 7
 
-      - name: Auto Keepalive
+      - name: Auto Keepalive (udržení cronu aktivního)
         run: |
           if [ "$(date +%d)" = "01" ]; then
             git config --global user.name "github-actions[bot]"
